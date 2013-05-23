@@ -1,9 +1,10 @@
-/*R
+/*
  * mega8_bikelight.c
  *
  * Created: 21.07.2012 17:48:27
- *  Author: jesstr
+ * Author: Pavel Cherstvov
  */ 
+
 
 #define F_CPU 8000000
 
@@ -30,15 +31,18 @@
 						
 #define POWER_DOWN		MCUCR|=(1<<SE)|(1<<SM1);
 
+
 volatile unsigned char on;
 	 
 
+/* IO start initialization */
 void IO_Init(void)
 {
 	PWR_DDR|=(1<<PWR_PIN);
 	PORTD|=(1<<PD2);	// Подтяжка для INT0
 }
 
+/* Switch blinking mode (instant on, fast blink, slow blink, etc. ) */
 void SwitchMode(unsigned char mode)
 {
 	unsigned char i;
@@ -47,6 +51,7 @@ void SwitchMode(unsigned char mode)
 	}
 }
 
+/* INT0 interrupt handle, connected to "ON/MODE/OFF" button */ 
 ISR(INT0_vect)
 {
 	//cli();
@@ -63,18 +68,18 @@ ISR(INT0_vect)
 	//sei();
 }	
 
+/* INT1 interrupt handle, connected to the nRF24L01 "IRQ" pin */
 ISR(INT1_vect)
 {
 	
 }	
 
+/* Main routine */
 int main(void)
 {
 	IO_Init();
 	GICR|=(1<<INT0)|(1<<INT1);
 	//MCUCR|=(1<<ISC01);
-	
-	//TURN_ON;
 	
 	sei();
 	
