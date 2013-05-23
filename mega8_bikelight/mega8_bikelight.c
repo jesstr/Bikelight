@@ -12,6 +12,7 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
+#include "spi.h"
 
 #define PWR_PORT	PORTD
 #define PWR_DDR		DDRD
@@ -32,7 +33,8 @@
 #define POWER_DOWN		MCUCR|=(1<<SE)|(1<<SM1);
 
 
-volatile unsigned char on;
+volatile unsigned char pwr_on; 		/* pwr_on = 1 - device is switched on
+					   pwr_on = 0 - device is switched off */
 	 
 
 /* IO start initialization */
@@ -40,6 +42,12 @@ void IO_Init(void)
 {
 	PWR_DDR|=(1<<PWR_PIN);
 	PORTD|=(1<<PD2);	// Подтяжка для INT0
+}
+
+/* Interrupts start initialization */
+void IRQ_Init(void)
+{
+	GICR|=(1<<INT0)|(1<<INT1);
 }
 
 /* Switch blinking mode (instant on, fast blink, slow blink, etc. ) */
@@ -55,14 +63,14 @@ void SwitchMode(unsigned char mode)
 ISR(INT0_vect)
 {
 	//cli();
-	if (on) {
+	if (pwr_on) {
 		TURN_OFF;
-		on=0;
+		pwr_on=0;
 	}	
 	else {	
 		TURN_ON;
 		SwitchMode(1);
-		on=1;
+		pwr_on=1;
 	}	
 	_delay_ms(250);
 	//sei();
@@ -78,7 +86,7 @@ ISR(INT1_vect)
 int main(void)
 {
 	IO_Init();
-	GICR|=(1<<INT0)|(1<<INT1);
+	IRQ_Init();
 	//MCUCR|=(1<<ISC01);
 	
 	sei();
