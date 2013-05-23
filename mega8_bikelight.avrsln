@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# AvrStudio Solution File, Format Version 11.00
+Project("{D1100916-62DA-4D80-A9B4-55A1E7CCEEB3}") = "mega8_bikelight", "mega8_bikelight\mega8_bikelight.avrgccproj", "{3FFD4DF6-0A60-4183-93C1-BF7AE3AAD73D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|AVR = Debug|AVR
+		Release|AVR = Release|AVR
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3FFD4DF6-0A60-4183-93C1-BF7AE3AAD73D}.Debug|AVR.ActiveCfg = Debug|AVR
+		{3FFD4DF6-0A60-4183-93C1-BF7AE3AAD73D}.Debug|AVR.Build.0 = Debug|AVR
+		{3FFD4DF6-0A60-4183-93C1-BF7AE3AAD73D}.Release|AVR.ActiveCfg = Release|AVR
+		{3FFD4DF6-0A60-4183-93C1-BF7AE3AAD73D}.Release|AVR.Build.0 = Release|AVR
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
