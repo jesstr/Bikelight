@@ -12,7 +12,7 @@
 #define IRQ_DDR DDRD
 /* End of defines section to check/edit if switched to another CPU */
 
-#define CE_LOW	CE_PORT&=~_BV(CE_PIN)
+#define CE_LOWCE_PORT&=~_BV(CE_PIN)
 #define CE_HIGH CE_PORT|=_BV(CE_PIN)
 
 #define CE_PULSE	CE_HIGH; \
