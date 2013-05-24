@@ -13,6 +13,7 @@
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
 #include "spi.h"
+#include "nRF24L01.h"
 
 #define PWR_PORT	PORTD
 #define PWR_DDR		DDRD
@@ -22,15 +23,15 @@
 #define SWITCH_DDR	DDRD
 #define SWITCH_PIN	PD7
 
-#define TURN_ON		PWR_PORT|=(1<<PWR_PIN);
-#define TURN_OFF	PWR_PORT&=~(1<<PWR_PIN);
+#define TURN_ON		PWR_PORT|=(1<<PWR_PIN)
+#define TURN_OFF	PWR_PORT&=~(1<<PWR_PIN)
 
 #define SWITCH_MODE		SWITCH_DDR|=(1<<SWITCH_PIN);   \
 						_delay_ms(10); \
 						SWITCH_DDR&=~(1<<SWITCH_PIN); \
-						_delay_ms(10);
+						_delay_ms(10)
 						
-#define POWER_DOWN		MCUCR|=(1<<SE)|(1<<SM1);
+#define POWER_DOWN		MCUCR|=(1<<SE)|(1<<SM1)
 
 
 volatile unsigned char pwr_on; 		/* pwr_on = 1 - device is switched on
@@ -88,7 +89,9 @@ int main(void)
 	IO_Init();
 	IRQ_Init();
 	//MCUCR|=(1<<ISC01);
-	
+	nRF24L01_Init();
+	SPI_Init_Master();
+
 	sei();
 	
 	set_sleep_mode(SLEEP_MODE_PWR_DOWN);

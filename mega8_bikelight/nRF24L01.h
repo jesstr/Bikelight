@@ -2,20 +2,22 @@
 #ifndef _NRF24L01_H_
 #define _NRF24L01_H_ 1
 
-#define CE_PIN PB4
+/* Begin of defines section to check/edit if switched to another CPU */
+#define CE_PIN PB0
 #define CE_PORT PORTB
 #define CE_DDR DDRB
 
-#define IRQ_PIN PD0
+#define IRQ_PIN PD3
 #define IRQ_PORT PORTD
 #define IRQ_DDR DDRD
+/* End of defines section to check/edit if switched to another CPU */
 
-#define CE_LOW	CE_PORT&=~_BV(CE_PIN);
-#define CE_HIGH CE_PORT|=_BV(CE_PIN);
+#define CE_LOW	CE_PORT&=~_BV(CE_PIN)
+#define CE_HIGH CE_PORT|=_BV(CE_PIN)
 
 #define CE_PULSE	CE_HIGH; \
 			_delay_us(15); \
-			CE_LOW;
+			CE_LOW
 
 //Список команд
 #define R_REGISTER			0b00000000 // + 5 младших бит адреса регистра
