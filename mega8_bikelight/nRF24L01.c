@@ -2,6 +2,7 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include "spi.h"
+#include "nRF24L01.h"
 
 /* IO pins initialization used to control nRF24L01 module */
 void nRF24L01_Init(void)
@@ -16,8 +17,7 @@ void nRF24L01_SendData(unsigned char *data, unsigned char length)
 {
 	SPI_CS1_LOW;
 	SPI_SendByte_Master(W_TX_PAYLOAD);
-	while (length)
-	{
+	while (length) {
 		SPI_SendByte_Master(*data);
 		data++;
 		length--;		

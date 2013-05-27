@@ -15,7 +15,7 @@
 #define MOSI		3
 #define SCK		5
 
-#ifdef 0
+#if 0
 //Определение портов SPI через UART
 #define SPI_UART_DDR		DDRE
 #define SPI_UART_CS_DDR		DDRE

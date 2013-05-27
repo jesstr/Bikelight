@@ -33,9 +33,12 @@
 						
 #define POWER_DOWN		MCUCR|=(1<<SE)|(1<<SM1)
 
+#define RX_PAYLOAD_LENGTH 3			/* Fixed RX data packet length in bytes */ 
+#define TX_PAYLOAD_LENGTH RX_PAYLOAD_LENGTH	/* Fixed TX data packet length in bytes */ 
 
-#define RX_PAYLOAD_LENGTH 3		/* Fixed data packet length in bytes */ 
 
+unsigned char rx_payload[RX_PAYLOAD_LENGTH];
+unsigned char tx_payload[TX_PAYLOAD_LENGTH];
 
 volatile unsigned char pwr_on; 		/* pwr_on = 1 - device is switched on
 					   pwr_on = 0 - device is switched off */
@@ -55,6 +58,7 @@ void IO_Init(void)
 /* Interrupts start initialization */
 void IRQ_Init(void)
 {
+	/* 
 	MCUCR|=(1<<ISC01); 		/* INT0 falling edge */
 	GICR|=(1<<INT0)|(1<<INT1);	/* INT0 & INT1 enabled */
 }
@@ -151,16 +155,23 @@ int main(void)
 {
 	IO_Init();
 	IRQ_Init();
+	SPI_Init_Master();
+	
+	TURN_ON;
+	SwitchMode(1);
+	pwr_on=1;
+	
 	nRF24L01_Init();
 	nRF24L01_Standby_1();
 	nRF24L01_SetRXPayloadLenght(RX_PAYLOAD_LENGTH);
-	SPI_Init_Master();
+	nRF24L01_Receive_On();
 
 	sei();
 	
 	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
 					
     	while(1) {
+		/* RX commands parsing */
 		if (new_rx_data) {
 			new_rx_data=0;
 			switch (rx_payload[0]) {

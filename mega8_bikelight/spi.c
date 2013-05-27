@@ -1,4 +1,5 @@
 #include <avr/io.h>
+#include "spi.h"
    
    // Инициализация аппаратного SPI в режиме Master
   void SPI_Init_Master(void)
@@ -51,6 +52,7 @@
 		return SPDR;
   }  
 
+#if 0
 /* Transfer byte from Master */
 unsigned char SPI_TransByte_Master(unsigned char)
 {
@@ -62,5 +64,5 @@ unsigned char SPI_TransByte_Slave(unsigned char)
 {
 
 } 
-
+#endif
  
