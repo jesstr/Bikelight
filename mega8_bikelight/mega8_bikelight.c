@@ -5,8 +5,8 @@
  * Author: Pavel Cherstvov
  */ 
 
-
-#define F_CPU 8000000
+/*FCU must be defined at "Properties->Toolchain->Symbols" as "F_CPU=16000000". */
+/* #define F_CPU 8000000 */
 
 #include <avr/io.h>
 #include <util/delay.h>
@@ -14,6 +14,7 @@
 #include <avr/sleep.h>
 #include "spi.h"
 #include "nRF24L01.h"
+#include "commands.h"
 
 #define PWR_PORT	PORTD
 #define PWR_DDR		DDRD
@@ -23,14 +24,34 @@
 #define SWITCH_DDR	DDRD
 #define SWITCH_PIN	PD7
 
-#define TURN_ON		PWR_PORT|=(1<<PWR_PIN)
-#define TURN_OFF	PWR_PORT&=~(1<<PWR_PIN)
+#define TURN_ON		PWR_PORT|=(1<<PWR_PIN); \
+					pwr_on=1
+#define TURN_OFF	PWR_PORT&=~(1<<PWR_PIN); \
+					pwr_on=0
 
-#define SWITCH_MODE		SWITCH_DDR|=(1<<SWITCH_PIN);   \
-				_delay_ms(10); \
-				SWITCH_DDR&=~(1<<SWITCH_PIN); \
-				_delay_ms(10)
+#define SWITCH_MODE		SWITCH_DDR|=(1<<SWITCH_PIN); \
+						_delay_ms(10); \
+						SWITCH_DDR&=~(1<<SWITCH_PIN); \
+						_delay_ms(10)
+
+/* Modes of light */
+#define MODE_OFF		TURN_OFF
+								
+#define MODE_INSTANT	TURN_OFF; \
+						_delay_ms(10); \
+						TURN_ON; \
+						SwitchMode(1)
+										
+#define MODE_FASTFLASH	TURN_OFF; \
+						_delay_ms(10); \
+						TURN_ON; \
+						SwitchMode(2)
 						
+#define MODE_SLOWFLASH	TURN_OFF; \
+						_delay_ms(10); \
+						TURN_ON; \
+						SwitchMode(3)
+																		
 #define POWER_DOWN		MCUCR|=(1<<SE)|(1<<SM1)
 
 #define RX_PAYLOAD_LENGTH 3			/* Fixed RX data packet length in bytes */ 
@@ -58,8 +79,7 @@ void IO_Init(void)
 /* Interrupts start initialization */
 void IRQ_Init(void)
 {
-	/* 
-	MCUCR|=(1<<ISC01); 		/* INT0 falling edge */
+	// MCUCR|=(1<<ISC01); 		/* INT0 falling edge */
 	GICR|=(1<<INT0)|(1<<INT1);	/* INT0 & INT1 enabled */
 }
 
@@ -105,7 +125,7 @@ ISR(INT1_vect)
 		case 0x40: {
 			CE_LOW;
 			
-			/* reading RX buffer */
+			/* Reading RX buffer */
 			SPI_CS1_LOW; 
 			SPI_SendByte_Master(R_RX_PAYLOAD); 
 			while (i<RX_PAYLOAD_LENGTH) { 
@@ -115,7 +135,7 @@ ISR(INT1_vect)
 						
 			_delay_us(2);
 			
-			/* clearing IRQ flag */
+			/* Clearing IRQ flag */
 			SPI_CS1_LOW; 
 			SPI_SendByte_Master(W_REGISTER|STATUS); 
 			SPI_SendByte_Master(buff|(0x40)); 
@@ -129,7 +149,7 @@ ISR(INT1_vect)
 		}
 		/* TX_DS - data sent */		
 		case 0x20: {
-			/* clearing IRQ flag */
+			/* Clearing IRQ flag */
 			SPI_CS1_LOW; 
 			SPI_SendByte_Master(W_REGISTER|STATUS); 
 			SPI_SendByte_Master(buff|(0x20));
@@ -138,7 +158,7 @@ ISR(INT1_vect)
 			break;  
 		}
 		/* Error: MAX count of TX attempts reached */		
-		case 0x10:{
+		case 0x10: {
 			/* clearing IRQ flag */			
 			SPI_CS1_LOW; 
 			SPI_SendByte_Master(W_REGISTER|STATUS); 
@@ -175,17 +195,29 @@ int main(void)
 		if (new_rx_data) {
 			new_rx_data=0;
 			switch (rx_payload[0]) {
-				/* 0x01 - turn on the light instantly */
-				case 0x01: {
-					TURN_ON;
-					SwitchMode(1);
-					pwr_on=1;
-					break;				
-				}
-				/* 0x02 - turn off the light */
-				case 0x02: {
+				/* COMM_OFF - turn off the light */
+				case COMM_OFF: {
 					TURN_OFF;
-					pwr_on=0;
+					break;
+				}
+				/* COMM_ON - turn on the light in previous operating mode */
+				case COMM_ON: {
+					TURN_ON;
+					break;
+				}
+				/* COMM_INSTANT - switch mode to instantly mode */
+				case COMM_INSTANT: {
+					MODE_INSTANT;
+					break;
+				}
+				/* COMM_FASTFLASH - switch mode to fast flash mode */
+				case COMM_FASTFLASH: {
+					MODE_FASTFLASH;
+					break;
+				}
+				/* COMM_SLOWFLASH - switch mode to slow flash mode */
+				case COMM_SLOWFLASH: {
+					MODE_SLOWFLASH;
 					break;
 				}			
 			}
