@@ -35,34 +35,42 @@
 						_delay_ms(10)
 
 /* Modes of light */
-#define MODE_OFF		TURN_OFF
-								
+#define MODE_OFF		TURN_OFF; \
+						last_mode = 0			
+							
+							
 #define MODE_INSTANT	TURN_OFF; \
 						_delay_ms(10); \
 						TURN_ON; \
-						SwitchMode(1)
+						last_mode = 1; \
+						SwitchMode(last_mode)
 										
 #define MODE_FASTFLASH	TURN_OFF; \
 						_delay_ms(10); \
 						TURN_ON; \
-						SwitchMode(2)
+						last_mode = 2; \
+						SwitchMode(last_mode)
 						
 #define MODE_SLOWFLASH	TURN_OFF; \
 						_delay_ms(10); \
 						TURN_ON; \
-						SwitchMode(3)
+						last_mode = 3; \
+						SwitchMode(last_mode)
 																		
 #define POWER_DOWN		MCUCR|=(1<<SE)|(1<<SM1)
 
 #define RX_PAYLOAD_LENGTH 3			/* Fixed RX data packet length in bytes */ 
 #define TX_PAYLOAD_LENGTH RX_PAYLOAD_LENGTH	/* Fixed TX data packet length in bytes */ 
 
-
 unsigned char rx_payload[RX_PAYLOAD_LENGTH];
 unsigned char tx_payload[TX_PAYLOAD_LENGTH];
 
-volatile unsigned char pwr_on; 		/* pwr_on = 1 - device is switched on
+volatile unsigned char pwr_on=0; 		/* pwr_on = 1 - device is switched on
 					   pwr_on = 0 - device is switched off */
+
+volatile unsigned char last_mode = 0; 		/* Last mode of light which will be restored after on/off */
+
+#define MAX_LIGHT_MODES	3
 
 volatile unsigned char new_rx_data=0;	/* New RX data flag */
  
@@ -95,7 +103,7 @@ void SwitchMode(unsigned char mode)
 /* INT0 interrupt handle, connected to "ON/MODE/OFF" button */ 
 ISR(INT0_vect)
 {
-	//cli();
+	/*
 	if (pwr_on) {
 		TURN_OFF;
 		pwr_on=0;
@@ -106,7 +114,19 @@ ISR(INT0_vect)
 		pwr_on=1;
 	}	
 	_delay_ms(250);
-	//sei();
+	*/
+
+		if (last_mode > MAX_LIGHT_MODES) {
+			last_mode = 0;
+		}
+					
+		TURN_OFF;
+		_delay_ms(10);
+		TURN_ON;
+		SwitchMode(++last_mode);
+		pwr_on=1;
+
+	_delay_ms(250);
 }	
 
 /* INT1 interrupt handle, connected to the nRF24L01 "IRQ" pin */
@@ -176,11 +196,11 @@ int main(void)
 	IO_Init();
 	IRQ_Init();
 	SPI_Init_Master();
-	
+	/*
 	TURN_ON;
 	SwitchMode(1);
 	pwr_on=1;
-	
+	*/
 	nRF24L01_Init();
 	nRF24L01_Standby_1();
 	nRF24L01_SetRXPayloadLenght(RX_PAYLOAD_LENGTH);
@@ -197,7 +217,7 @@ int main(void)
 			switch (rx_payload[0]) {
 				/* COMM_OFF - turn off the light */
 				case COMM_OFF: {
-					TURN_OFF;
+					MODE_OFF;
 					break;
 				}
 				/* COMM_ON - turn on the light in previous operating mode */
