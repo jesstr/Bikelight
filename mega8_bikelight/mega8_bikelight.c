@@ -115,18 +115,30 @@ ISR(INT0_vect)
 	}	
 	_delay_ms(250);
 	*/
-
+	
+	_delay_ms(10);
+	
+	while (BUTTON_1_PIN_REG & (1<<BUTTON_1_PIN)) {
+		
+		_delay_ms(100);
+		button_timer++;
+		if (button_timer > BUTTON_LONGPRESS_TIME) {
+			MODE_OFF;
+			return;
+		}
+			
+	}
+		
 		if (last_mode > MAX_LIGHT_MODES) {
 			last_mode = 0;
-		}
-					
+		}	
 		TURN_OFF;
 		_delay_ms(10);
 		TURN_ON;
 		SwitchMode(++last_mode);
 		pwr_on=1;
-
-	_delay_ms(250);
+		_delay_ms(250);
+		
 }	
 
 /* INT1 interrupt handle, connected to the nRF24L01 "IRQ" pin */
