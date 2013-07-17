@@ -15,6 +15,7 @@
 #include "spi.h"
 #include "nRF24L01.h"
 #include "commands.h"
+#include "buttons.h"
 
 #define PWR_PORT	PORTD
 #define PWR_DDR		DDRD
@@ -24,38 +25,54 @@
 #define SWITCH_DDR	DDRD
 #define SWITCH_PIN	PD7
 
-#define TURN_ON		PWR_PORT|=(1<<PWR_PIN); \
-					pwr_on=1
-#define TURN_OFF	PWR_PORT&=~(1<<PWR_PIN); \
-					pwr_on=0
+#define TURN_ON		do { \
+						PWR_PORT|=(1<<PWR_PIN); \
+						pwr_on=1; \
+					} while(0)
+					
+#define TURN_OFF	do { \
+						PWR_PORT&=~(1<<PWR_PIN); \
+						pwr_on=0; \
+					} while(0)
 
-#define SWITCH_MODE		SWITCH_DDR|=(1<<SWITCH_PIN); \
-						_delay_ms(10); \
-						SWITCH_DDR&=~(1<<SWITCH_PIN); \
-						_delay_ms(10)
+#define SWITCH_MODE		do { \
+							SWITCH_DDR|=(1<<SWITCH_PIN); \
+							_delay_ms(10); \
+							SWITCH_DDR&=~(1<<SWITCH_PIN); \
+							_delay_ms(10); \
+						} while(0)
 
 /* Modes of light */
-#define MODE_OFF		TURN_OFF; \
-						last_mode = 0			
-							
-							
-#define MODE_INSTANT	TURN_OFF; \
-						_delay_ms(10); \
-						TURN_ON; \
-						last_mode = 1; \
-						SwitchMode(last_mode)
+#define MAX_LIGHT_MODES	3
+
+#define MODE_OFF		do { \
+							TURN_OFF; \
+							last_mode = 0; \
+						} while(0)		
+													
+#define MODE_INSTANT	do { \
+							TURN_OFF; \
+							_delay_ms(10); \
+							TURN_ON; \
+							last_mode = 1; \
+							SwitchMode(last_mode); \
+						} while(0)	
 										
-#define MODE_FASTFLASH	TURN_OFF; \
-						_delay_ms(10); \
-						TURN_ON; \
-						last_mode = 2; \
-						SwitchMode(last_mode)
+#define MODE_FASTFLASH	do { \
+							TURN_OFF; \
+							_delay_ms(10); \
+							TURN_ON; \
+							last_mode = 2; \
+							SwitchMode(last_mode); \
+						} while(0)
 						
-#define MODE_SLOWFLASH	TURN_OFF; \
-						_delay_ms(10); \
-						TURN_ON; \
-						last_mode = 3; \
-						SwitchMode(last_mode)
+#define MODE_SLOWFLASH	do { \
+							TURN_OFF; \
+							_delay_ms(10); \
+							TURN_ON; \
+							last_mode = 3; \
+							SwitchMode(last_mode); \
+						} while(0)
 																		
 #define POWER_DOWN		MCUCR|=(1<<SE)|(1<<SM1)
 
@@ -65,17 +82,19 @@
 unsigned char rx_payload[RX_PAYLOAD_LENGTH];
 unsigned char tx_payload[TX_PAYLOAD_LENGTH];
 
+/* Flags */
 volatile unsigned char pwr_on=0; 		/* pwr_on = 1 - device is switched on
 					   pwr_on = 0 - device is switched off */
 
 volatile unsigned char last_mode = 0; 		/* Last mode of light which will be restored after on/off */
 
-#define MAX_LIGHT_MODES	3
-
 volatile unsigned char new_rx_data=0;	/* New RX data flag */
- 
 
-	 
+/* Buttons definition */
+#define ON_OFF_BUTTON		(!(BUTTON_1_PIN_REG & (1<<BUTTON_1_PIN)))	/*	1 - button is pressed, 0 - button is released */
+#define BUTTON_LONGPRESS_TIME	10							/* 100ms*BUTTON_LONGPRESS_TIME - time which button have to be pressed */
+char button_timer=0;
+
 
 /* IO start initialization */
 void IO_Init(void)
@@ -103,42 +122,25 @@ void SwitchMode(unsigned char mode)
 /* INT0 interrupt handle, connected to "ON/MODE/OFF" button */ 
 ISR(INT0_vect)
 {
-	/*
-	if (pwr_on) {
-		TURN_OFF;
-		pwr_on=0;
-	}	
-	else {	
-		TURN_ON;
-		SwitchMode(1);
-		pwr_on=1;
-	}	
-	_delay_ms(250);
-	*/
-	
-	_delay_ms(10);
-	
-	while (BUTTON_1_PIN_REG & (1<<BUTTON_1_PIN)) {
-		
+	while (ON_OFF_BUTTON) {
 		_delay_ms(100);
 		button_timer++;
 		if (button_timer > BUTTON_LONGPRESS_TIME) {
 			MODE_OFF;
+			button_timer = 0;
+			_delay_ms(1000);
 			return;
 		}
-			
 	}
-		
-		if (last_mode > MAX_LIGHT_MODES) {
-			last_mode = 0;
-		}	
-		TURN_OFF;
-		_delay_ms(10);
-		TURN_ON;
-		SwitchMode(++last_mode);
-		pwr_on=1;
-		_delay_ms(250);
-		
+	
+	if (last_mode > MAX_LIGHT_MODES) {
+		last_mode = 0;
+	}	
+	TURN_OFF;
+	_delay_ms(10);
+	TURN_ON;
+	SwitchMode(++last_mode);
+	_delay_ms(250);
 }	
 
 /* INT1 interrupt handle, connected to the nRF24L01 "IRQ" pin */
@@ -208,6 +210,7 @@ int main(void)
 	IO_Init();
 	IRQ_Init();
 	SPI_Init_Master();
+	Buttons_Init();
 	/*
 	TURN_ON;
 	SwitchMode(1);
