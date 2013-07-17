@@ -93,7 +93,6 @@ volatile unsigned char new_rx_data=0;	/* New RX data flag */
 /* Buttons definition */
 #define ON_OFF_BUTTON		(!(BUTTON_1_PIN_REG & (1<<BUTTON_1_PIN)))	/*	1 - button is pressed, 0 - button is released */
 #define BUTTON_LONGPRESS_TIME	10							/* 100ms*BUTTON_LONGPRESS_TIME - time which button have to be pressed */
-char button_timer=0;
 
 
 /* IO start initialization */
@@ -122,18 +121,19 @@ void SwitchMode(unsigned char mode)
 /* INT0 interrupt handle, connected to "ON/MODE/OFF" button */ 
 ISR(INT0_vect)
 {
+	char button_timer = 0;
 	while (ON_OFF_BUTTON) {
 		_delay_ms(100);
 		button_timer++;
 		if (button_timer > BUTTON_LONGPRESS_TIME) {
 			MODE_OFF;
 			button_timer = 0;
-			_delay_ms(1000);
+			_delay_ms(2000);
 			return;
 		}
 	}
 	
-	if (last_mode > MAX_LIGHT_MODES) {
+	if (last_mode >= MAX_LIGHT_MODES) {
 		last_mode = 0;
 	}	
 	TURN_OFF;
