@@ -5,7 +5,7 @@
  * Author: Pavel Cherstvov
  */ 
 
-/*FCU must be defined at "Properties->Toolchain->Symbols" as "F_CPU=16000000". */
+/*FCU must be defined at "Properties->Toolchain->Symbols" as "F_CPU=8000000". */
 /* #define F_CPU 8000000 */
 
 #include <avr/io.h>
@@ -48,34 +48,35 @@
 
 #define MODE_OFF		do { \
 							TURN_OFF; \
-							eeprom_update_byte(last_mode_eeprom, last_mode); \
+							eeprom_update_byte(&eemem_last_mode, mode); \
+							mode = 0; \
 						} while(0)		
 													
 #define MODE_INSTANT	do { \
 							TURN_OFF; \
 							_delay_ms(10); \
 							TURN_ON; \
-							last_mode = 1; \
-							eeprom_update_byte(last_mode_eeprom, last_mode); \
-							SwitchMode(last_mode); \
+							eeprom_update_byte(&eemem_last_mode, mode); \
+							mode = 1; \
+							SwitchMode(mode); \
 						} while(0)	
 										
 #define MODE_FASTFLASH	do { \
 							TURN_OFF; \
 							_delay_ms(10); \
 							TURN_ON; \
-							last_mode = 2; \
-							eeprom_update_byte(last_mode_eeprom, last_mode); \			
-							SwitchMode(last_mode); \
+							eeprom_update_byte(&eemem_last_mode, mode); \
+							mode = 2; \
+							SwitchMode(mode); \
 						} while(0)
 						
 #define MODE_SLOWFLASH	do { \
 							TURN_OFF; \
 							_delay_ms(10); \
 							TURN_ON; \
-							last_mode = 3; \
-							eeprom_update_byte(last_mode_eeprom, last_mode); \
-							SwitchMode(last_mode); \
+							eeprom_update_byte(&eemem_last_mode, mode); \
+							mode = 3; \
+							SwitchMode(mode); \
 						} while(0)
 																		
 #define POWER_DOWN		MCUCR|=(1<<SE)|(1<<SM1)
@@ -90,8 +91,8 @@ unsigned char tx_payload[TX_PAYLOAD_LENGTH];
 volatile unsigned char pwr_on=0; 		/* pwr_on = 1 - device is switched on
 					   pwr_on = 0 - device is switched off */
 
-unsigned char EEMEM last_mode_eeprom; 	/* Eeprom variable containing last mode */
-volatile unsigned char last_mode;		/* Last mode of light which will be restored after on/off */
+unsigned char EEMEM eemem_last_mode; 	/* Eeprom variable containing blinking mode */
+volatile unsigned char mode = 0;		/* Blinking mode which will be restored after on/off */
 
 volatile unsigned char new_rx_data=0;	/* New RX data flag */
 
@@ -126,6 +127,7 @@ void SwitchMode(unsigned char mode)
 /* INT0 interrupt handle, connected to "ON/MODE/OFF" button */ 
 ISR(INT0_vect)
 {
+	/* Long press */
 	char button_timer = 0;
 	while (ON_OFF_BUTTON) {
 		_delay_ms(100);
@@ -138,15 +140,26 @@ ISR(INT0_vect)
 		}
 	}
 	
-	if (last_mode >= MAX_LIGHT_MODES) {
-		last_mode = 0;
-	}	
+	/* Short press */
 	TURN_OFF;
 	_delay_ms(10);
 	TURN_ON;
-	SwitchMode(++last_mode);
-	eeprom_update_byte(last_mode_eeprom, last_mode);	
-	_delay_ms(250);
+	/* if 'turn on' action - restore last mode */
+	if (mode == 0) {
+		mode = eeprom_read_byte(&eemem_last_mode);
+	} 
+	/* if 'switch mode' action - save last mode */
+	else { 
+		if (mode >= MAX_LIGHT_MODES) {
+			mode = 1;
+		}
+		else {
+			mode++;
+		}	
+		eeprom_update_byte(&eemem_last_mode, mode);	
+	}
+	SwitchMode(mode);	
+	_delay_ms(250);			
 }	
 
 /* INT1 interrupt handle, connected to the nRF24L01 "IRQ" pin */
@@ -217,18 +230,13 @@ int main(void)
 	IRQ_Init();
 	SPI_Init_Master();
 	Buttons_Init();
-	/*
-	TURN_ON;
-	SwitchMode(1);
-	pwr_on=1;
-	*/
 	nRF24L01_Init();
 	nRF24L01_Standby_1();
 	nRF24L01_SetRXPayloadLenght(RX_PAYLOAD_LENGTH);
 	nRF24L01_Receive_On();
 
-	last_mode = eeprom_read_byte(last_mode_eeprom);
-
+	eeprom_busy_wait();
+	
 	sei();
 	
 	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
