@@ -16,6 +16,7 @@
 #include "nRF24L01.h"
 #include "commands.h"
 #include "buttons.h"
+#include <avr/eeprom.h>
 
 #define PWR_PORT	PORTD
 #define PWR_DDR		DDRD
@@ -47,7 +48,7 @@
 
 #define MODE_OFF		do { \
 							TURN_OFF; \
-							last_mode = 0; \
+							eeprom_update_byte(last_mode_eeprom, last_mode); \
 						} while(0)		
 													
 #define MODE_INSTANT	do { \
@@ -55,6 +56,7 @@
 							_delay_ms(10); \
 							TURN_ON; \
 							last_mode = 1; \
+							eeprom_update_byte(last_mode_eeprom, last_mode); \
 							SwitchMode(last_mode); \
 						} while(0)	
 										
@@ -63,6 +65,7 @@
 							_delay_ms(10); \
 							TURN_ON; \
 							last_mode = 2; \
+							eeprom_update_byte(last_mode_eeprom, last_mode); \			
 							SwitchMode(last_mode); \
 						} while(0)
 						
@@ -71,6 +74,7 @@
 							_delay_ms(10); \
 							TURN_ON; \
 							last_mode = 3; \
+							eeprom_update_byte(last_mode_eeprom, last_mode); \
 							SwitchMode(last_mode); \
 						} while(0)
 																		
@@ -86,7 +90,8 @@ unsigned char tx_payload[TX_PAYLOAD_LENGTH];
 volatile unsigned char pwr_on=0; 		/* pwr_on = 1 - device is switched on
 					   pwr_on = 0 - device is switched off */
 
-volatile unsigned char last_mode = 0; 		/* Last mode of light which will be restored after on/off */
+unsigned char EEMEM last_mode_eeprom; 	/* Eeprom variable containing last mode */
+volatile unsigned char last_mode;		/* Last mode of light which will be restored after on/off */
 
 volatile unsigned char new_rx_data=0;	/* New RX data flag */
 
@@ -140,6 +145,7 @@ ISR(INT0_vect)
 	_delay_ms(10);
 	TURN_ON;
 	SwitchMode(++last_mode);
+	eeprom_update_byte(last_mode_eeprom, last_mode);	
 	_delay_ms(250);
 }	
 
@@ -220,6 +226,8 @@ int main(void)
 	nRF24L01_Standby_1();
 	nRF24L01_SetRXPayloadLenght(RX_PAYLOAD_LENGTH);
 	nRF24L01_Receive_On();
+
+	last_mode = eeprom_read_byte(last_mode_eeprom);
 
 	sei();
 	
